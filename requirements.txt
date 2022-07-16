@@ -1,0 +1,6 @@
+django==3.2
+django-cors-headers==3.8.0
+django-rest-knox==4.1.0
+djangorestframework==3.12.4
+django_filter==21.1
+django-rest-swagger

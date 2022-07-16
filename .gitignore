@@ -1,0 +1,8 @@
+env
+.mypy_cache
+.vscode
+__pycache__
+docker-compose.yml
+Dockerfile
+Pipfile.lock
+Pipfile
