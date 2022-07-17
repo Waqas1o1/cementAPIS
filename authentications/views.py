@@ -1,9 +1,12 @@
-from django.http.response import JsonResponse
+import json
+from xml.parsers import expat
+from rest_framework.decorators import api_view
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-from knox.models import AuthToken
-from authentications.serializer import UserSerializer, RegisterSerializer
+from django.core.exceptions import ObjectDoesNotExist
+from app.models import Agent, Bank, CashInHandPerson, Company, Driver, ExpenseHead, Party
+from authentications.serializer import UpdateUserSerializer, UserSerializer, RegisterSerializer
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from knox.views import LoginView as KnoxLoginView
 from django.contrib.auth import login
@@ -53,21 +56,106 @@ class UserViewSet(viewsets.ViewSet):
                          "message": "All List Data", "data": serializer.data}
         return Response(response_dict)
 
-    def update(self, request, pk=None):
-        try:
-            queryset = User.objects.all()
-            recovery = get_object_or_404(queryset, pk=pk)
-            serializer = s.UserSerializer(
-                recovery, data=request.data, context={"request": request})
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            response_dict = {"error": False,
-                             "message": "Successfully Updated Data"}
-        except:
-            response_dict = {"error": True,
-                             "message": serializer.errors}
+    def update(self,request, pk=None):
+        user = User.objects.get(pk=pk)
+        data = {**request.data}
+        if "companies" in request.data:
+            quires = request.data["companies"]
+            quires = json.loads(quires)
+            save_obj = []
+            for id in quires:
+                try:
+                    obj = Company.objects.get(id=id)
+                    save_obj.append(obj)
+                except ObjectDoesNotExist:
+                    pass 
+            user.companies.set(save_obj)
+            del data["companies"]
+        if "parties" in request.data:
+            quires = request.data["parties"]
+            quires = json.loads(quires)
+            save_obj = []
+            for id in quires:
+                try:
+                    obj = Party.objects.get(id=id)
+                    save_obj.append(obj)
+                except ObjectDoesNotExist:
+                    pass 
+            user.parties.set(save_obj)
+            del data["parties"]
+        if "agents" in request.data:
+            quires = request.data["agents"]
+            quires = json.loads(quires)
+            save_obj = []
+            for id in quires:
+                try:
+                    obj = Agent.objects.get(id=id)
+                    save_obj.append(obj)
+                except ObjectDoesNotExist:
+                    pass 
+            user.agents.set(save_obj)
+            del data["agents"]
+        if "drivers" in request.data:
+            quires = request.data["drivers"]
+            quires = json.loads(quires)
+            save_obj = []
+            for id in quires:
+                try:
+                    obj = Driver.objects.get(id=id)
+                    save_obj.append(obj)
+                except ObjectDoesNotExist:
+                    pass 
+            user.drivers.set(save_obj)
+            del data["drivers"]
+        if "cash_in_hps" in request.data:
+            quires = request.data["cash_in_hps"]
+            quires = json.loads(quires)
+            save_obj = []
+            for id in quires:
+                try:
+                    obj = CashInHandPerson.objects.get(id=id)
+                    save_obj.append(obj)
+                except ObjectDoesNotExist:
+                    pass 
+            user.cash_in_hps.set(save_obj)
+            del data["cash_in_hps"]
+        if "banks" in request.data:
+            quires = request.data["banks"]
+            quires = json.loads(quires)
+            save_obj = []
+            for id in quires:
+                try:
+                    obj = Bank.objects.get(id=id)
+                    save_obj.append(obj)
+                except ObjectDoesNotExist:
+                    pass 
+            user.banks.set(save_obj)
+            del data["banks"]
+        if "expense_heads" in request.data:
+            quires = request.data["expense_heads"]
+            quires = json.loads(quires)
+            save_obj = []
+            for id in quires:
+                try:
+                    obj = ExpenseHead.objects.get(id=id)
+                    save_obj.append(obj)
+                except ObjectDoesNotExist:
+                    pass 
+            user.expense_heads.set(save_obj)
+            del data["expense_heads"]
 
-        return Response(response_dict)
+
+
+        serializer = UpdateUserSerializer(request.user, data=data, partial=True)
+        serializer.is_valid()
+            
+        if serializer.errors:
+            response = {"error":True,"message":serializer.errors}
+        else:   
+            serializer.save()
+            response = {"error": False, "message": "Updated Successfuly"}
+        return Response(response)
+
 
     def retrieve(self, request, pk=None):
         queryset = User.objects.all()
