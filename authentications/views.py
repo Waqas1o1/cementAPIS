@@ -144,9 +144,7 @@ class UserViewSet(viewsets.ViewSet):
             user.expense_heads.set(save_obj)
             del data["expense_heads"]
 
-
-
-        serializer = UpdateUserSerializer(request.user, data=data, partial=True)
+        serializer = UpdateUserSerializer(user, data=data, partial=True)
         serializer.is_valid()
             
         if serializer.errors:
