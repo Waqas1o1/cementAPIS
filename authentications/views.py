@@ -1,17 +1,14 @@
 import json
-from xml.parsers import expat
 from rest_framework.decorators import api_view
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from django.core.exceptions import ObjectDoesNotExist
 from app.models import Agent, Bank, CashInHandPerson, Company, Driver, ExpenseHead, Party
-from authentications.serializer import UpdateUserSerializer, UserSerializer, RegisterSerializer
+from authentications.serializer import UserSerializer, RegisterSerializer
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from knox.views import LoginView as KnoxLoginView
 from django.contrib.auth import login
-from django.http import HttpResponse
-from django.contrib.auth.models import Group
 from .models import User
 from . import serializer as s
 from rest_framework import viewsets
@@ -143,12 +140,18 @@ class UserViewSet(viewsets.ViewSet):
                     pass 
             user.expense_heads.set(save_obj)
             del data["expense_heads"]
-
-        serializer = UpdateUserSerializer(user, data=data, partial=True)
+        
+        if "password" in data:
+            password = data["password"][0]
+            user.set_password(password)
+            user.save()
+            del data["password"]
+            
+        serializer = UserSerializer(user, data=data, partial=True)
         serializer.is_valid()
             
         if serializer.errors:
-            response = {"error":True,"message":serializer.errors}
+            response = {"error":True,"message":serializer.errors,"detail":serializer.error_messages}
         else:   
             serializer.save()
             response = {"error": False, "message": "Updated Successfuly"}
