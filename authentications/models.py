@@ -14,4 +14,4 @@ class User(AbstractUser):
     cash_in_hps = models.ManyToManyField(CashInHandPerson, blank=True)
     banks = models.ManyToManyField(Bank, blank=True)
     expense_heads = models.ManyToManyField(ExpenseHead, blank=True)
-    ui_permissions = models.JSONField(default=dict)
+    ui_permissions = models.JSONField(default=list)
