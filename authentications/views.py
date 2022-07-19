@@ -25,7 +25,7 @@ class RegisterAPI(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        dict_response = {"user": user.username, "error": False}
+        dict_response = {"user": UserSerializer(user,many=False).data, "error": False}
 
         return Response(dict_response)
 
@@ -156,7 +156,6 @@ class UserViewSet(viewsets.ViewSet):
             serializer.save()
             response = {"error": False, "message": "Updated Successfuly"}
         return Response(response)
-
 
     def retrieve(self, request, pk=None):
         queryset = User.objects.all()
