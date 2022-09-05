@@ -276,7 +276,7 @@ class PartyViewSet(viewsets.ViewSet):
 class BankViewSet(viewsets.ViewSet):
 
     def list(self, request):
-        if request.user.is_superuser():
+        if request.user.is_superuser:
             bank = m.Bank.objects.all()
         else:
             bank = request.user.banks.all()
