@@ -43,7 +43,8 @@ router.register("PayToCashInHandPerson", views.PayToCashInHandPersonViewSet,
 router.register("DriverReceiving", views.DriverReceiving,
                 basename="driverReceiving")
 router.register("AgentReceivings", views.Recivings, basename='AgentReceivings')
-router.register("ExpectedOrder", views.ExpectedOrderViewSet, basename='ExpectedOrder')
+router.register("ExpectedOrder", views.ExpectedOrderViewSet,
+                basename='ExpectedOrder')
 
 
 urlpatterns = [
@@ -78,7 +79,8 @@ urlpatterns = [
          views.DirectCompanyDispatchFilter.as_view()),
     path('Charge_FU/<slug:slug>', views.PartiesTranspotationsFilter.as_view()),
     path('CashInHandPerson/', views.CashInHandPersonFilter.as_view()),
-    path('ChequeFilter/<str:FromDate>/<str:ToDate>',views.ChequeFilter.as_view()),
+    path('ChequeFilter/<str:FromDate>/<str:ToDate>',
+         views.ChequeFilter.as_view()),
 
     # Get Leadgers By date
     path('FilterCompanyLeadger/<str:FromDate>/<str:ToDate>/<int:company>',
@@ -99,21 +101,22 @@ urlpatterns = [
          views.FrieghtUnloadingLeadgerFilter.as_view()),
     path('FilterDriverLeadger/<str:FromDate>/<str:ToDate>/<int:driver>',
          views.DriverLeadgerFilter.as_view()),
-    path('BookingFilter/<str:date>',views.BookingFilter.as_view()),
-    path('RecoveryFilter/<str:date>',views.RecoveryFilter.as_view()),
+    path('BookingFilter/<str:date>', views.BookingFilter.as_view()),
+    path('RecoveryFilter/<str:date>', views.RecoveryFilter.as_view()),
     path('ChequeFilter/', views.ChequeFilter.as_view()),
 
-     # Documentation
-     path('doc/', schema_view),
+    # Documentation
+    path('doc/', schema_view),
 
-     #Queries 
-     path('FilterParty/<str:FromDate>/<str:ToDate>', views.FilterPartyList),
-     path('FilterPartyNetBalance/<str:date>', views.FilterPartyNetBalance),
-     path('FilterExpectedOrder/<str:FromDate>/<str:ToDate>', views.FilterExpectedOrder),
-     # TrialBalanceCalculate
-     path('TrialBalanceCalculate/', views.TrialBalanceCalculate),
-     # Dispatch
-     path('DispacthReport/', views.DispatchReport)
+    # Queries
+    path('FilterParty/<str:FromDate>/<str:ToDate>', views.FilterPartyList),
+    path('FilterPartyNetBalance/<str:date>', views.FilterPartyNetBalance),
+    path('FilterExpectedOrder/<str:FromDate>/<str:ToDate>',
+         views.FilterExpectedOrder),
+    # TrialBalanceCalculate
+    path('TrialBalanceCalculate/', views.TrialBalanceCalculate),
+    # Dispatch
+    path('DispacthReport/', views.DispatchReport)
 
 
 ]

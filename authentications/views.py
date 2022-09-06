@@ -25,7 +25,8 @@ class RegisterAPI(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        dict_response = {"user": UserSerializer(user,many=False).data, "error": False}
+        dict_response = {"user": UserSerializer(
+            user, many=False).data, "error": False}
 
         return Response(dict_response)
 
@@ -53,7 +54,7 @@ class UserViewSet(viewsets.ViewSet):
                          "message": "All List Data", "data": serializer.data}
         return Response(response_dict)
 
-    def update(self,request, pk=None):
+    def update(self, request, pk=None):
         user = User.objects.get(pk=pk)
         data = {**request.data}
         if "companies" in request.data:
@@ -65,7 +66,7 @@ class UserViewSet(viewsets.ViewSet):
                     obj = Company.objects.get(id=id)
                     save_obj.append(obj)
                 except ObjectDoesNotExist:
-                    pass 
+                    pass
             user.companies.set(save_obj)
             del data["companies"]
         if "parties" in request.data:
@@ -77,7 +78,7 @@ class UserViewSet(viewsets.ViewSet):
                     obj = Party.objects.get(id=id)
                     save_obj.append(obj)
                 except ObjectDoesNotExist:
-                    pass 
+                    pass
             user.parties.set(save_obj)
             del data["parties"]
         if "agents" in request.data:
@@ -89,7 +90,7 @@ class UserViewSet(viewsets.ViewSet):
                     obj = Agent.objects.get(id=id)
                     save_obj.append(obj)
                 except ObjectDoesNotExist:
-                    pass 
+                    pass
             user.agents.set(save_obj)
             del data["agents"]
         if "drivers" in request.data:
@@ -101,7 +102,7 @@ class UserViewSet(viewsets.ViewSet):
                     obj = Driver.objects.get(id=id)
                     save_obj.append(obj)
                 except ObjectDoesNotExist:
-                    pass 
+                    pass
             user.drivers.set(save_obj)
             del data["drivers"]
         if "cash_in_hps" in request.data:
@@ -113,7 +114,7 @@ class UserViewSet(viewsets.ViewSet):
                     obj = CashInHandPerson.objects.get(id=id)
                     save_obj.append(obj)
                 except ObjectDoesNotExist:
-                    pass 
+                    pass
             user.cash_in_hps.set(save_obj)
             del data["cash_in_hps"]
         if "banks" in request.data:
@@ -125,7 +126,7 @@ class UserViewSet(viewsets.ViewSet):
                     obj = Bank.objects.get(id=id)
                     save_obj.append(obj)
                 except ObjectDoesNotExist:
-                    pass 
+                    pass
             user.banks.set(save_obj)
             del data["banks"]
         if "expense_heads" in request.data:
@@ -137,22 +138,23 @@ class UserViewSet(viewsets.ViewSet):
                     obj = ExpenseHead.objects.get(id=id)
                     save_obj.append(obj)
                 except ObjectDoesNotExist:
-                    pass 
+                    pass
             user.expense_heads.set(save_obj)
             del data["expense_heads"]
-        
+
         if "password" in data:
             password = data["password"][0]
             user.set_password(password)
             user.save()
             del data["password"]
-            
+
         serializer = UserSerializer(user, data=data, partial=True)
         serializer.is_valid()
-            
+
         if serializer.errors:
-            response = {"error":True,"message":serializer.errors,"detail":serializer.error_messages}
-        else:   
+            response = {"error": True, "message": serializer.errors,
+                        "detail": serializer.error_messages}
+        else:
             serializer.save()
             response = {"error": False, "message": "Updated Successfuly"}
         return Response(response)

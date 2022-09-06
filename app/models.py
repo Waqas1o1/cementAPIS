@@ -7,7 +7,7 @@ import string
 # Create your models here.
 from django.utils import timezone
 # Self Define Function
-from utils.utils import ConsignmentAmount, DeleteLeadgers
+from utils.utils import ConsignmentAmount, DeleteLeadgers, UpdateLeadgers
 from .import static
 
 

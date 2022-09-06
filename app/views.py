@@ -353,6 +353,7 @@ class PartiesTranspotationManagerViewSet(viewsets.ViewSet):
         try:
             serializer = s.PartiesTranspotationManagerSerializer(
                 data=request.data, context={"request": request})
+            print(serializer.error_messages)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             dict_response = {"error": False,

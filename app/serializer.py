@@ -168,6 +168,7 @@ class PayToBankSerializer(s.ModelSerializer):
         response['agent'] = AgentSerializer(instance.agent).data
         return response
 
+
 class PayToAgentSerializer(s.ModelSerializer):
     class Meta:
         model = m.PayToAgent
@@ -180,6 +181,7 @@ class PayToAgentSerializer(s.ModelSerializer):
         response['agent_2'] = AgentSerializer(instance.agent_2).data
         response['party'] = PartySerializer(instance.party).data
         return response
+
 
 class PayToCashInHandPersonSerializer(s.ModelSerializer):
     class Meta:
@@ -243,7 +245,7 @@ class FriegthUnloadingLeadgerSerializer(s.ModelSerializer):
 
 
 class ChequeSerializer(s.ModelSerializer):
-    
+
     class Meta:
         model = m.Cheque
         fields = '__all__'
@@ -252,7 +254,8 @@ class ChequeSerializer(s.ModelSerializer):
         response = super().to_representation(instance)
         response['company'] = CompanySerializer(instance.company).data
         response['bank'] = BankSerializer(instance.bank).data
-        response['cheque_lg_id'] = ChequeLeadgerSerializer(m.ChequeLeadger.objects.get(id=instance.cheque_lg_id)).data
+        response['cheque_lg_id'] = ChequeLeadgerSerializer(
+            m.ChequeLeadger.objects.get(id=instance.cheque_lg_id)).data
         return response
 # Leadgers Serializers
 
