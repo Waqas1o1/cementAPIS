@@ -1,14 +1,20 @@
-from django.db.models import Sum
+from django.http import response
+from Scment_Distribution_System.settings import BASE_DIR
+from datetime import datetime
+import os
+from django.http.response import HttpResponse
+from django.views.generic.base import View
+from utils import utils
+from django.db.models import Sum, fields
 from django.shortcuts import redirect, render, get_object_or_404
 from app import serializer as s
 from app import models as m
-from rest_framework import viewsets, generics
+from rest_framework import serializers, viewsets, generics
 from rest_framework.response import Response
 from django.http import JsonResponse
-from utils import utils
-
-
-# Create your views here.
+from django.core import management
+from rest_framework.decorators import api_view
+import time
 
 
 class CompanyViewSet(viewsets.ViewSet):
@@ -353,7 +359,6 @@ class PartiesTranspotationManagerViewSet(viewsets.ViewSet):
         try:
             serializer = s.PartiesTranspotationManagerSerializer(
                 data=request.data, context={"request": request})
-            print(serializer.error_messages)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             dict_response = {"error": False,
@@ -412,21 +417,18 @@ class PartiesTranspotationManagerViewSet(viewsets.ViewSet):
         return Response(dict_response)
 
     def delete(self, request, pk=None):
-        try:
-            obj = m.PartiesTranspotationManager.objects.get(id=pk)
-            obj.orderPlacement.Frieght_left += obj.friegth * obj.qty
-            obj.orderPlacement.unloading_left += obj.unloading * obj.qty
-            obj.orderPlacement.save()
-            m.PartyLeadger.objects.get(id=obj.party_lg_id).delete()
-            m.FriegthUnloadingLeadger.objects.get(id=obj.fu_lg_id).delete()
-            m.DriverLeadger.objects.get(id=obj.driver_lg_id).delete()
-            obj.delete()
+        # try:
+        obj = m.PartiesTranspotationManager.objects.get(id=pk)
+        obj.orderPlacement.Frieght_left += obj.friegth * obj.qty
+        obj.orderPlacement.unloading_left += obj.unloading * obj.qty
+        obj.orderPlacement.save()
+        m.PartyLeadger.objects.get(id=obj.party_lg_id).delete()
+        m.FriegthUnloadingLeadger.objects.get(id=obj.fu_lg_id).delete()
+        m.DriverLeadger.objects.get(id=obj.driver_lg_id).delete()
+        obj.delete()
 
-            dict_response = {"error": False,
-                             "message": "Successfully Deleted"}
-        except:
-            dict_response = {"error": True,
-                             "message": "Error During Deleted Data Data"}
+        dict_response = {"error": False,
+                         "message": "Successfully Deleted"}
 
         return Response(dict_response)
 
@@ -973,6 +975,7 @@ class RecoveryViewSet(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         try:
+            print(request)
             queryset = m.Recovery.objects.all()
             recovery = get_object_or_404(queryset, pk=pk)
             serializer = s.RecoverySerializer(
@@ -1571,6 +1574,7 @@ def AddEntities(request):
     #     pty = m.PartyLeadger.objects.get(id=dispatch.party_lg_id)
     #     dispatch.date = pty.date
     #     dispatch.save()
+    utils.FixUpdate()
     return redirect('/app/test')
 # Leadgers Views
 
@@ -1725,6 +1729,25 @@ class ChequeFilter(generics.ListAPIView):
     queryset = m.Cheque.objects.all()
 
 
+def GetPartiesNetBalance(request, ToDate):
+    partiesLg = m.PartyLeadger.objects.filter(date=ToDate)
+    partiesLgSet = []
+    for party in m.Party.objects.all():
+        data = partiesLg.filter(party=party).last()
+        if data:
+            partiesLgSet.append(
+                {'party': party.name, 'net_Balance': data.net_Balancse})
+        else:
+            data = m.PartyLeadger.objects.filter(party=party).last()
+            if data:
+                partiesLgSet.append(
+                    {'party': party.name, 'net_Balance': data.net_Balancse})
+            else:
+                partiesLgSet.append({'party': party.name, 'net_Balance': 0})
+
+    return JsonResponse(partiesLgSet, safe=False)
+
+
 class CashInHandPersonFilter(generics.ListAPIView):
     serializer_class = s.CashInHandPersonSerializer
     queryset = m.CashInHandPerson.objects.all()
@@ -1824,18 +1847,6 @@ def FilterPartyList(request, FromDate, ToDate):
     except:
         response = {'error': True, 'data': 'Error in data'}
 
-    # return JsonResponse(response,safe=False)
-    # try:
-    #     c = m.PartyLeadger.objects.filter(date__lte=ToDate, date__gte=FromDate).filter(brand__isnull=False).values('brand').annotate(brand_qty_sum=Sum('qty')).values('brand_qty_sum','party__name','brand__name','net_Balancse').order_by('date')
-    #     data = []
-    #     if len(c):
-    #         for i in c:
-    #             data.append({'productName':i['party__name'],'brandName':i['brand__name'],'brandQtySum':i['brand_qty_sum'],'net_Balancse:':i['net_Balancse']})
-
-    #     response = {'error':False,'data': data}
-    # except:
-    #         response = {'error':True,'data':'Error in data'}
-
     return JsonResponse(response, safe=False)
 
 
@@ -1845,7 +1856,6 @@ def FilterPartyNetBalance(request, date):
     parties = {}
 
     for i in query:
-        response = {}
         if i.party.name in parties:
             parties[i.party.name] = i.net_Balancse
         else:
@@ -1856,19 +1866,10 @@ def FilterPartyNetBalance(request, date):
 
 
 def FilterExpectedOrder(request, FromDate, ToDate):
-    query = m.ExpectedOrder.objects.filter(date__lte=ToDate, date__gte=FromDate).values(
-        'party').annotate(expected_orders=Sum('expected_orders'), expected_rate=Sum('expected_rate'))
-    res = []
-    for i in query:
-        i['party'] = m.Party.objects.get(id=i['party']).name
-        res.append(i)
-    # party = m.Party.objects.get(name=name)
-    # res = []
-    # query = m.ExpectedOrder.objects.filter(party=party,date__gte=FromDate,date__lte=ToDate).values('id','party','expected_orders','expected_rate','date')
-    # for i in query:
-    #     i['party'] = m.Party.objects.get(id=i['party']).name
-    #     res.append(i)
-    return JsonResponse(res, safe=False)
+    query = m.ExpectedOrder.objects.filter(date__gte=FromDate, date__lte=ToDate).values(
+        'id', 'expected_orders', 'expected_rate', 'date', 'party__name')
+    query = [i for i in query]
+    return JsonResponse(query, safe=False)
 
 # Trial Balance
 
@@ -1982,14 +1983,402 @@ def TrialBalanceCalculate(request):
     return JsonResponse(result, safe=False)
 
 
-def DispatchReport(request):
-    dispatches = m.DispatchEnventory.objects.all()
+def DispatchReport(request, FromDate, ToDate):
+    dispatches = m.DispatchEnventory.objects.filter(
+        date__gte=FromDate, date__lte=ToDate)
 
     list = []
     for dispatch in dispatches:
-        w = m.WareHouseEnventoryLeadger.objects.first()
-        dict = {'date': dispatch.date, 'PartyName': dispatch.party.name, 'Brand': dispatch.brand.name, 'qty': dispatch.qty,
+        w = m.WareHouseEnventoryLeadger.objects.get(slug=dispatch.slug)
+        dict = {'date': dispatch.date, 'PartyName': str(dispatch.party), 'Brand': dispatch.brand.name, 'qty': dispatch.qty,
                 'Sales Rate': dispatch.rate, "Amount": dispatch.rate * dispatch.qty, 'Purchaserate': w.rate, "Profit Amount": ((dispatch.rate * dispatch.qty) - (dispatch.qty * w.rate))}
+
         list.append(dict)
 
     return JsonResponse(list, safe=False)
+
+
+@api_view(['POST', ])
+def Backup_or_RestoreData(request):
+    dir_name = os.path.join(BASE_DIR, 'Backups').replace(os.sep, '/')
+    filename = request.POST.get('filename', None)
+    command = request.POST.get('command', None)
+
+    if not command:
+        response = {
+            'error': True, 'message': 'What you want Restore / Backup Tell me by passing commad'}
+    if not filename:
+        response = {'error': True,
+                    'message': 'Filename Required passing commad'}
+    elif command == 'Backup':
+        print(dir_name)
+        with open(f'{dir_name}/{filename}.json', 'w+') as f:
+            management.call_command('dumpdata', all=True, stdout=f)
+            response = {'error': False,
+                        'message': f'Backup Successful save as {filename}.json'}
+    elif command == 'Restore':
+        if os.path.exists(f'{dir_name}/{filename}.json'):
+            management.call_command(
+                'loaddata', f'{dir_name}/{filename}.json', verbosity=0)
+            response = {'error': False,
+                        'message': f'Successfuly Restored ({filename})'}
+        else:
+            response = {'error': True, 'messege': 'No path exist'}
+    return JsonResponse(response)
+
+
+def CheckRestoreFiles(request):
+    dir_name = os.path.join(BASE_DIR, 'Backups').replace(os.sep, '/')
+
+    # Get list of all files only in the given directory
+    list_of_files = filter(lambda x: os.path.isfile(os.path.join(dir_name, x)),
+                           os.listdir(dir_name))
+    # Sort list of files based on last modification time in ascending order
+    list_of_files = sorted(
+        list_of_files, key=lambda x: os.path.getmtime(os.path.join(dir_name, x)))
+    # Iterate over sorted list of files and print file path
+    # along with last modification time of file
+    response = []
+    for file_name in list_of_files:
+        file_path = os.path.join(dir_name, file_name)
+        timestamp_str = time.strftime('%m/%d/%Y',
+                                      time.gmtime(os.path.getmtime(file_path)))
+        dict = {timestamp_str: file_name}
+        print(timestamp_str, ' -->', file_name)
+        response.append(dict)
+    return JsonResponse(response, safe=False)
+
+
+# Genrat PDF
+class GenratePartyLedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        party = kwargs['party']
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.PartyLeadger.objects.filter(
+            party__id=party, date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        try:
+            TotalAmountSum = ledgers.filter(transaction_type='Credit').values(
+                'party').annotate(amount_sum=Sum('total_amount'))[0]
+        except:
+            TotalAmountSum = ledgers.filter(transaction_type='Credit').values(
+                'party').annotate(amount_sum=Sum('total_amount'))
+        try:
+            TotalRecoverySum = ledgers.filter(transaction_type='Debit').values(
+                'party').annotate(recovery_sum=Sum('total_amount'))[0]
+        except:
+            TotalRecoverySum = ledgers.filter(transaction_type='Debit').values(
+                'party').annotate(recovery_sum=Sum('total_amount'))
+        try:
+            TotalQtySum = ledgers.filter(transaction_type='Debit').values(
+                'party').annotate(Sum('qty'))[0]
+        except:
+            TotalQtySum = ledgers.filter(transaction_type='Debit').values(
+                'party').annotate(Sum('qty'))
+
+        dict = {
+            'Holder': ledgers.first().party.name,
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'QTYSum': TotalQtySum,
+            'TotalAmountSum': TotalAmountSum,
+            'TotalRecoverySum': TotalRecoverySum
+        }
+
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/PartyLedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateCompanyLedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        company = kwargs['company']
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.CompanyLeadger.objects.filter(
+            company__id=company, date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        try:
+            TotalAmountSum = ledgers.filter(transaction_type='Credit').values(
+                'company').annotate(amount_sum=Sum('total_amount'))[0]
+        except:
+            TotalAmountSum = ledgers.filter(transaction_type='Credit').values(
+                'company').annotate(amount_sum=Sum('total_amount'))
+        try:
+            TotalBookings = ledgers.filter(transaction_type='Debit').values(
+                'company').annotate(bookings_sum=Sum('total_amount'))[0]
+        except:
+            TotalBookings = ledgers.filter(transaction_type='Debit').values(
+                'company').annotate(bookings_sum=Sum('total_amount'))
+        dict = {
+            'Holder': ledgers.first().company.name,
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'QTYSum': ledgers.values('company').annotate(Sum('qty'))[0],
+            'TotalAmountSum': TotalAmountSum,
+            'TotalBookings': TotalBookings,
+            'TotalFreight': ledgers.values('company').annotate(freight_sum=Sum('total_Frieght'))[0],
+            'TotalUnloading': ledgers.values('company').annotate(TotalUnloading=Sum('total_Unloading'))[0],
+        }
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/CompanyLedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateAgentLedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        agent = kwargs['agent']
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.AgentLeadger.objects.filter(
+            agent__id=agent, date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        try:
+            TotalAmountSum = ledgers.filter(transaction_type='Credit').values(
+                'agent').annotate(amount_sum=Sum('total_amount'))[0]
+        except:
+            TotalAmountSum = ledgers.filter(transaction_type='Credit').values(
+                'agent').annotate(amount_sum=Sum('total_amount'))
+
+        try:
+            TotalRecoverySum = ledgers.filter(transaction_type='Debit').values(
+                'agent').annotate(recovery_sum=Sum('total_amount'))[0]
+        except:
+            TotalRecoverySum = ledgers.filter(transaction_type='Debit').values(
+                'agent').annotate(recovery_sum=Sum('total_amount'))
+
+        dict = {
+            'Holder': ledgers.first().agent.name,
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'TotalAmountSum': TotalAmountSum,
+            'TotalRecoverySum': TotalRecoverySum
+        }
+
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/AgentLedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateCashLedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        cashInHandPerson = kwargs['cashInHandPerson']
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.AgentLeadger.objects.filter(
+            cashInHandPerson__id=cashInHandPerson, date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        try:
+            TotalAmountSum = ledgers.filter(transaction_type='Credit').values(
+                'cashInHandPerson').annotate(amount_sum=Sum('total_amount'))[0]
+        except:
+            TotalAmountSum = ledgers.filter(transaction_type='Credit').values(
+                'cashInHandPerson').annotate(amount_sum=Sum('total_amount'))
+        try:
+            TotalRecoverySum = ledgers.filter(transaction_type='Debit').values(
+                'cashInHandPerson').annotate(recovery_sum=Sum('total_amount'))[0]
+        except:
+            TotalRecoverySum = ledgers.filter(transaction_type='Debit').values(
+                'cashInHandPerson').annotate(recovery_sum=Sum('total_amount'))
+
+        dict = {
+            'Holder': ledgers.first().cashInHandPerson.name,
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'TotalAmountSum': TotalAmountSum,
+            'TotalRecoverySum': TotalRecoverySum
+        }
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/CashLedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateChequeLedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.ChequeLeadger.objects.filter(
+            date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        dict = {
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+        }
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/PartyLedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateExpenceLedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        expenseHead = kwargs['expenseHead']
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.ExpenseLeadger.objects.filter(
+            expenseHead__id=expenseHead, date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        dict = {
+            'Holder': ledgers.first().expenseHead.name,
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'TotalAmountSum': ledgers.values('expenseHead').annotate(amount_sum=Sum('total_amount'))[0],
+        }
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/ExpenceLedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateDriverLedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        driver = kwargs['driver']
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.DriverLeadger.objects.filter(
+            driver__id=driver, date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        try:
+            TotalAmountGivenSum = ledgers.filter(transaction_type='Credit').values(
+                'driver').annotate(amount_sum=Sum('total_amount'))[0]
+        except:
+            TotalAmountGivenSum = ledgers.filter(transaction_type='Credit').values(
+                'driver').annotate(amount_sum=Sum('total_amount'))
+
+        try:
+            TotalAmountSum = ledgers.filter(transaction_type='Debit').values(
+                'driver').annotate(amountpaid_sum=Sum('total_amount'))[0]
+        except:
+            TotalAmountSum = ledgers.filter(transaction_type='Debit').values(
+                'driver').annotate(amountpaid_sum=Sum('total_amount'))
+
+        dict = {
+            'Holder': ledgers.first().driver.name,
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'QTYSum': ledgers.values('driver').annotate(Sum('qty'))[0],
+            'TotalAmountGivenSum': TotalAmountGivenSum,
+            'TotalAmountSum': TotalAmountSum,
+            'TotalFreight': ledgers.values('driver').annotate(freight_sum=Sum('friegth'))[0],
+            'TotalUnloading': ledgers.values('driver').annotate(TotalUnloading=Sum('unloading'))[0],
+        }
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/DriverLedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateBankLedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        bank = kwargs['bank']
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.BankLeadger.objects.filter(
+            bank__id=bank, date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        dict = {
+            'Holder': ledgers.first().bank.name,
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'TotalAmountSum': ledgers.values('bank').annotate(amount_sum=Sum('total_amount'))[0],
+        }
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/BankLedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateFULedgerPDF(View):
+    def get(self, request, *args, **kwargs):
+        party = kwargs['party']
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        ledgers = m.FriegthUnloadingLeadger.objects.filter(
+            party__id=party, date__gte=FromDate, date__lte=ToDate)
+        if not ledgers.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        dict = {
+            'Holder': ledgers.first(),
+            'Ledgers': ledgers,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'TotalAmountPaid': ledgers.filter(transaction_type='Debit').values('party').annotate(amount_sum=Sum('total_amount')),
+            'TotalGiven': ledgers.filter(transaction_type='Credit').values('party').annotate(bookings_sum=Sum('total_amount')),
+            'TotalFreight': ledgers.values('party').annotate(freight_sum=Sum('friegth')),
+            'TotalUnloading': ledgers.values('party').annotate(unloading=Sum('unloading')),
+        }
+        print(dict['TotalAmountPaid'])
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/FULedgerPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+class GenrateDispatchReportPDF(View):
+    def get(self, request, *args, **kwargs):
+        FromDate = kwargs['FromDate']
+        ToDate = kwargs['ToDate']
+        dispatches = m.DispatchEnventory.objects.filter(
+            date__gte=FromDate, date__lte=ToDate)
+
+        if not dispatches.exists():
+            return JsonResponse({'error': False, 'data': 'No Data Found'})
+        list = []
+        total_qty = 0
+        total_amount = 0
+        total_profit = 0
+
+        for dispatch in dispatches:
+            w = m.WareHouseEnventoryLeadger.objects.get(slug=dispatch.slug)
+            dict = {'date': dispatch.date, 'PartyName': str(dispatch.party), 'Brand': dispatch.brand.name, 'qty': dispatch.qty,
+                    'Sales_Rate': dispatch.rate, "Amount": dispatch.rate * dispatch.qty, 'Purchaserate': w.rate, "Profit_Amount": ((dispatch.rate * dispatch.qty) - (dispatch.qty * w.rate))}
+            total_qty += dict['qty']
+            total_amount += dict['Amount']
+            total_profit += dict['Profit_Amount']
+            list.append(dict)
+
+        dict = {
+            'Holder': 'Report',
+            'Reports': list,
+            'FromDate': FromDate,
+            'ToDate': ToDate,
+            'ToDayDate': datetime.now(),
+            'TotalQty': total_qty,
+            'TotalAmount': total_amount,
+            'TotalProfit': total_profit,
+        }
+
+        # getting the template
+        pdf = utils.render_to_pdf('app/PDF/DispatchReportPDF.html', dict)
+        # rendering the template
+        return HttpResponse(pdf, content_type='application/pdf')

@@ -1,6 +1,5 @@
-from email.policy import default
 from django.db import models
-from django.contrib.auth.models import AbstractUser, Group
+from django.contrib.auth.models import AbstractUser
 from app.models import *
 # Create your models here.
 

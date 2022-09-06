@@ -116,7 +116,15 @@ urlpatterns = [
     # TrialBalanceCalculate
     path('TrialBalanceCalculate/', views.TrialBalanceCalculate),
     # Dispatch
+    path('DispacthReport/', views.DispatchReport),
+    # Queries
+    path('FilterParty/<str:FromDate>/<str:ToDate>', views.FilterPartyList),
+    path('FilterPartyNetBalance/<str:date>', views.FilterPartyNetBalance),
+    path('FilterExpectedOrder/<str:FromDate>/<str:ToDate>',
+         views.FilterExpectedOrder),
+    # TrialBalanceCalculate
+    path('TrialBalanceCalculate/', views.TrialBalanceCalculate),
+    # Dispatch
     path('DispacthReport/', views.DispatchReport)
-
 
 ]
