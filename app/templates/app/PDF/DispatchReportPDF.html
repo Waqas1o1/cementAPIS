@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load staticfiles %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{Holder}} Ledger</title>
+
+    <!-- Style -->
+    <style>
+        .text-center {
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        
+        table {
+            /* border-top: 1px solid black; */
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+            border-bottom: 1px solid rgb(221, 205, 205);
+            border-radius: 10px;
+        }
+        
+        td {
+            height: 25px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        th {
+            border-top: 1px solid black;
+            border-bottom: 1px solid black;
+            height: 30px;
+            vertical-align: middle;
+        }
+        
+        .left {
+            position: left;
+        }
+        
+        .right {
+            text-align: right;
+            align-items: right;
+        }
+        
+        .w-100 {
+            width: 100%;
+        }
+        
+        .bold {
+            font-weight: bold;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div>
+        <div class="text-center">
+            <!-- <img src="F:\RealServices\static\app\img\Logo.png" width="200" height="200" alt=""> -->
+        </div>
+        <div class="text-center" style="font-size: 25px;">
+            <p>Date wise Dispatch Report</p>
+            <br>
+            <small style="font-size: 14px;color: dimgrey;">Profit and Loss</small>
+        </div>
+        <div><b>From</b> : {{FromDate}}</div>
+        <div><b>To</b> : {{ToDate}}</div>
+        <div class="right"><b>{{ToDayDate}}</b></div>
+
+        <hr/>
+        <div class="text-center">Data Recoreds B/W
+            <b>
+                {{FromDate}}<---> {{ToDate}}
+            </b>
+        </div>
+        <table class="table w-100">
+            <!-- Heards  -->
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Party</th>
+                    <th>Brand</th>
+                    <th>Qty</th>
+                    <th>Sales Rate</th>
+                    <th>Amount</th>
+                    <th>Purchase Rate</th>
+                    <th>Profit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in Reports %}
+                <tr>
+                    <td>{{report.date}}</td>
+                    <td>{{report.PartyName}}</td>     
+                    <td>{{report.Brand}}</td>
+                    <td>{{report.qty}}</td>
+                    <td>{{report.Sales_Rate}}</td>
+                    <td>{{report.Amount}}</td>
+                    <td>{{report.Purchaserate}}</td>    
+                    <td>{{report.Profit_Amount}}</td>
+                </tr>
+                {% endfor %}
+                    <tr style="border-top: 0.02rem dotted rgb(68, 59, 59);">
+                        <td style="width: 100px;" class="bold">Total</td>
+                        <td class="bold">-</td>
+                        <td class="bold">-</td>
+                        <td class="bold">{{TotalQty}}</td>
+                        <td class="bold">-</td>
+                        <td class="bold">{{TotalAmount}}</td>
+                        <td class="bold">-</td>
+                        <td class="bold">{{TotalProfit}}</td>
+                    </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>
