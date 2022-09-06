@@ -117,14 +117,31 @@ urlpatterns = [
     path('TrialBalanceCalculate/', views.TrialBalanceCalculate),
     # Dispatch
     path('DispacthReport/', views.DispatchReport),
-    # Queries
-    path('FilterParty/<str:FromDate>/<str:ToDate>', views.FilterPartyList),
-    path('FilterPartyNetBalance/<str:date>', views.FilterPartyNetBalance),
-    path('FilterExpectedOrder/<str:FromDate>/<str:ToDate>',
-         views.FilterExpectedOrder),
-    # TrialBalanceCalculate
-    path('TrialBalanceCalculate/', views.TrialBalanceCalculate),
-    # Dispatch
-    path('DispacthReport/', views.DispatchReport)
+    # Backup ANd Restore
+    path('RorB-Data/', views.Backup_or_RestoreData),
 
+    # Dispatch
+    path('DispacthReport/<str:FromDate>/<str:ToDate>', views.DispatchReport),
+    path('CheckRestoreFiles/', views.CheckRestoreFiles),
+    # PDF
+    path('PartyLedgerPDF/<int:party>/<str:FromDate>/<str:ToDate>',
+         views.GenratePartyLedgerPDF.as_view()),
+    path('CompanyLedgerPDF/<int:company>/<str:FromDate>/<str:ToDate>',
+         views.GenrateCompanyLedgerPDF.as_view()),
+    path('AgentLedgerPDF/<int:agent>/<str:FromDate>/<str:ToDate>',
+         views.GenrateAgentLedgerPDF.as_view()),
+    path('DriverLedgerPDF/<int:driver>/<str:FromDate>/<str:ToDate>',
+         views.GenrateDriverLedgerPDF.as_view()),
+    path('ExpenceLedgerPDF/<int:expenseHead>/<str:FromDate>/<str:ToDate>',
+         views.GenrateExpenceLedgerPDF.as_view()),
+    path('BankLedgerPDF/<int:bank>/<str:FromDate>/<str:ToDate>',
+         views.GenrateBankLedgerPDF.as_view()),
+    path('CashLedgerPDF/<str:FromDate>/<str:ToDate>',
+         views.GenrateCashLedgerPDF.as_view()),
+    path('ChequeLedgerPDF/<str:FromDate>/<str:ToDate>',
+         views.GenrateChequeLedgerPDF.as_view()),
+    path('FULedgerPDF/<int:party>/<str:FromDate>/<str:ToDate>',
+         views.GenrateFULedgerPDF.as_view()),
+    path('DispatchReportPDF/<str:FromDate>/<str:ToDate>',
+         views.GenrateDispatchReportPDF.as_view()),
 ]
