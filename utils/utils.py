@@ -1,6 +1,9 @@
-from django.contrib.auth import models
-import os
+from io import BytesIO
+from django.http.response import HttpResponse
+from django.template.loader import get_template
 from app import models as m
+from django.db.models import Q
+from xhtml2pdf import pisa
 
 
 def ConsignmentAmount(qty, unloading, freight, totalAmount):
@@ -134,14 +137,25 @@ def DeleteLeadgers(obj, leadger, type, isReverse=False):
     l = leadger.objects.all()
 
     l = GetReliventLeadger(type, l, obj)
-
+    relvent_lg = l
     l = l.filter(id__gte=obj.id).order_by('id')
 
     last = obj
 
-    if len(l) == 1:
+    # First
+    if relvent_lg.count() == 1:
+        print('in first ')
         updateCurrentBalanceToOpeniing(type, last)
+    # last
+    elif obj == relvent_lg.last():
+        print('in 2nd')
+        lg = leadger.objects.get(id=obj.id)
+        last = relvent_lg.filter(Q(id__lte=lg.id) and ~Q(id=lg.id)).last()
+        updateCurrentBalance(type, last)
+        print(last.id, last.total_amount)
+    # Middle
     else:
+        print('in 3rd')
         for i in l[1:]:
             if obj.transaction_type == 'Credit':
                 if isReverse:
@@ -155,11 +169,45 @@ def DeleteLeadgers(obj, leadger, type, isReverse=False):
                 else:
                     i.net_Balancse += obj.total_amount
                 i.save(updating=True)
+
             if i == l.last():
                 last = i
         updateCurrentBalance(type, last)
 
     obj.delete(updating=True)
+
+
+# Methods
+
+def render_to_pdf(template_src, context_dict={}):
+    template = get_template(template_src)
+    html = template.render(context_dict)
+    result = BytesIO()
+
+    # This part will create the pdf.
+    pdf = pisa.pisaDocument(BytesIO(html.encode("ISO-8859-1")), result)
+    if not pdf.err:
+        return HttpResponse(result.getvalue(), content_type='application/pdf')
+    return None
+
+
+# Scripts
+def FixUpdate():
+    b = m.Party.objects.get(id=112)
+    b.current_Balance = b.opening_Balance
+    b.save()
+    lgs = m.PartyLeadger.objects.filter(party=b)
+    for i in lgs:
+        if i.total_amount == 225000:
+            print(b.current_Balance - i.total_amount)
+        if i.transaction_type == 'Credit':
+            b.current_Balance -= i.total_amount
+            i.net_Balancse = b.current_Balance
+        else:
+            b.current_Balance += i.total_amount
+            i.net_Balancse = b.current_Balance
+        i.save(updating=True)
+        b.save()
 
 
 def ExpenseTest():
